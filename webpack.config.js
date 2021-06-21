@@ -1,52 +1,38 @@
 const path = require('path');
-const fs = require('fs');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-//const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-// App directory
-const appDirectory = fs.realpathSync(process.cwd());
+const Dotenv = require('dotenv-webpack');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const TerserPlugin = require("terser-webpack-plugin");
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 
-// Gets absolute path of file within app directory
+const fs = require('fs');
+const appDirectory = fs.realpathSync(process.cwd());
 const resolveAppPath = relativePath => path.resolve(appDirectory, relativePath);
 
-// Host
 const host = process.env.HOST || 'localhost';
-
-// Required for babel-preset-react-app
 process.env.NODE_ENV = 'development';
 
 module.exports = {
 
     // Environment mode
     mode: 'development',
-
-    // Entry point of app
     entry: resolveAppPath('src'),
 
     output: {
-
         // Development filename output
-        path: resolveAppPath('public'),
-        filename: "assets/bundle.js",
+        path: __dirname + "/build",
+        filename: "bundle.js",
         chunkFilename: '[name].js'
     },
 
     devServer: {
-
-        // Serve index.html as the base
-        contentBase: resolveAppPath('public') + "/assets/",
-
-        // Enable compression
+        contentBase: resolveAppPath('public'),
         compress: true,
-
-        // Enable hot reloading
         hot: true,
-
         host,
         inline: true,
         port: 3000,
-       
-
-
+        open: "chrome"
     },
 
     module: {
@@ -58,28 +44,48 @@ module.exports = {
                 loader: 'babel-loader',
                 options: {
                     presets: [
-
-                        // Preset includes JSX, TypeScript, and some ESnext features
                         require.resolve('babel-preset-react-app'),
                     ]
                 }
             },
             {
                 test: /\.(s(a|c)ss)$/,
-                use: [ 'style-loader', 'css-loader', 'sass-loader' ]
-            }
+                use: [
+                    MiniCssExtractPlugin.loader,
+                    'css-loader', 'sass-loader'
+                ]
+            },
+            {
+                test: /\.(png|svg|jpg|jpeg|gif)$/,
+                use: {
+                    loader: 'url-loader',
+                },
+            },
+        ],
+
+    },
+
+    resolve: {
+        extensions: [ '*', '.js', '.jsx' ],
+    },
+
+    optimization: {
+        minimizer: [
+            new TerserPlugin({
+                parallel: true,
+            }),
         ],
     },
 
     plugins: [
-        // Re-generate index.html with injected script tag.
-        // The injected script tag contains a src value of the
-        // filename output defined above.
+        new Dotenv(),
+        new MiniCssExtractPlugin({ filename: "app.css" }),
+        new CleanWebpackPlugin(),
         new HtmlWebpackPlugin({
             inject: true,
             template: resolveAppPath('public/index.html'),
         }),
-        // new MiniCssExtractPlugin()
+
     ],
 
 };
